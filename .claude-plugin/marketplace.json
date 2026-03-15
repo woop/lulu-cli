@@ -1,0 +1,18 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "lulu-cli",
+  "description": "Manage LuLu macOS firewall rules from the terminal",
+  "owner": {
+    "name": "Willem Pienaar",
+    "email": "willem@pienaar.io"
+  },
+  "plugins": [
+    {
+      "name": "lulu-cli",
+      "description": "AI agent skill for managing LuLu macOS firewall rules",
+      "source": "./",
+      "skills": ["./skills/lulu-cli"],
+      "category": "development"
+    }
+  ]
+}
