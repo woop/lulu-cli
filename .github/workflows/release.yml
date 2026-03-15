@@ -25,3 +25,41 @@ jobs:
         with:
           files: lulu-cli-*.tar.gz
           generate_release_notes: true
+
+      - name: Update Homebrew formula
+        env:
+          TAP_TOKEN: ${{ secrets.TAP_TOKEN }}
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          SHA256=$(shasum -a 256 lulu-cli-${GITHUB_REF_NAME}-macos-universal.tar.gz | awk '{print $1}')
+          URL="https://github.com/woop/lulu-cli/releases/download/${GITHUB_REF_NAME}/lulu-cli-${GITHUB_REF_NAME}-macos-universal.tar.gz"
+
+          git clone https://x-access-token:${TAP_TOKEN}@github.com/woop/homebrew-tap.git /tmp/tap
+          cd /tmp/tap
+
+          cat > Formula/lulu-cli.rb << EOF
+          class LuluCli < Formula
+            desc "Manage LuLu macOS firewall rules from the command line"
+            homepage "https://github.com/woop/lulu-cli"
+            url "${URL}"
+            sha256 "${SHA256}"
+            version "${VERSION}"
+            license "MIT"
+
+            depends_on :macos
+
+            def install
+              bin.install "lulu-cli"
+            end
+
+            test do
+              assert_match "Usage:", shell_output("#{bin}/lulu-cli help")
+            end
+          end
+          EOF
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add Formula/lulu-cli.rb
+          git commit -m "Update lulu-cli to ${VERSION}"
+          git push

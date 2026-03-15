@@ -2,12 +2,21 @@
 
 Manage [LuLu](https://objective-see.org/products/lulu.html) firewall rules from the command line.
 
-[LuLu](https://objective-see.org/products/lulu.html) is a free, open-source macOS firewall that blocks unknown outgoing connections. It has a GUI, but no way to manage rules programmatically. This CLI fills that gap -- useful for automation, scripting, and especially for AI agents that need to manage their own network access.
+[LuLu](https://objective-see.org/products/lulu.html) is a free, open-source macOS firewall that blocks unknown outgoing connections. It has a GUI, but no way to manage rules programmatically. This CLI fills that gap -- useful for automation, scripting, and AI agents that need to manage their own network access.
+
+## Requirements
+
+- macOS 13+
+- [LuLu](https://objective-see.org/products/lulu.html) installed
+- `sudo` for write operations
 
 ## Install
 
 ```bash
-# From source (requires macOS 13+ and Swift)
+# Homebrew (recommended, pre-built binary)
+brew install woop/tap/lulu-cli
+
+# From source (requires Swift)
 git clone https://github.com/woop/lulu-cli
 cd lulu-cli
 make install    # builds and copies to ~/.local/bin/
@@ -40,32 +49,89 @@ That's the core loop: check blocks, add allows, reload.
 
 All write operations require `sudo`. Always run `reload` after changes.
 
+### `list [filter]`
+
+List all firewall rules. Optionally filter by keyword (matches key or binary path).
+
+```bash
+lulu-cli list              # all rules
+lulu-cli list curl         # rules for curl
+lulu-cli list '*'          # global/wildcard rules only
 ```
-lulu-cli list [filter]           List rules (optionally filter by keyword)
-lulu-cli recent [N]              Show N most recent blocks (default: 20)
 
-sudo lulu-cli add                Add a rule
-  --key KEY                        Signing identity or '*' for global
-  --path PATH                     Binary path or '*' for global
-  --action allow|block            Rule action
-  --addr ADDR                     Domain, IP, or '*' for any (default: '*')
-  --port PORT                     Port or '*' for any (default: '*')
-  --regex                         Treat --addr as regex
+### `recent [N]`
 
-sudo lulu-cli delete             Delete rules
-  --key KEY                        Required
-  --uuid UUID                     Specific rule (omit to delete all for key)
+Show the N most recent block rules, sorted newest first. Default: 20.
 
-sudo lulu-cli delete-match       Delete rules matching criteria
-  --key KEY                        Required
-  --action allow|block             Optional filter
-  --addr ADDR                      Optional filter
-  --port PORT                      Optional filter
+```bash
+lulu-cli recent            # last 20 blocks
+lulu-cli recent 5          # last 5
+```
 
-sudo lulu-cli enable|disable     Toggle a rule
-  --key KEY --uuid UUID
+### `add`
 
-sudo lulu-cli reload             Restart LuLu extension to apply changes
+Add a new firewall rule.
+
+| Flag | Description | Default |
+|------|-------------|---------|
+| `--key KEY` | Signing identity or `*` for global | required |
+| `--path PATH` | Binary path or `*` for global | required |
+| `--action allow\|block` | Rule action | required |
+| `--addr ADDR` | Domain, IP, or regex | `*` |
+| `--port PORT` | Port number or `*` | `*` |
+| `--regex` | Treat addr as regex | off |
+
+```bash
+# Allow a domain globally
+sudo lulu-cli add --key '*' --path '*' --action allow --addr example.com --port 443
+
+# Allow domain + all subdomains (regex)
+sudo lulu-cli add --key '*' --path '*' --action allow \
+  --addr '^(.+\.)?example\.com$' --port '*' --regex
+
+# Allow for a specific app only
+sudo lulu-cli add --key "/usr/bin/curl" --path /usr/bin/curl \
+  --action allow --addr example.com --port 443
+```
+
+### `delete`
+
+Delete rule(s) by key and optional UUID. Without `--uuid`, deletes all rules for the key.
+
+```bash
+sudo lulu-cli delete --key "com.apple.curl" --uuid "UUID-HERE"
+sudo lulu-cli delete --key "com.apple.curl"      # deletes ALL rules for this key
+```
+
+### `delete-match`
+
+Delete rules matching specific criteria.
+
+```bash
+sudo lulu-cli delete-match --key "com.apple.curl" --action block --port 53
+```
+
+### `enable` / `disable`
+
+Toggle a rule's enabled state.
+
+```bash
+sudo lulu-cli enable --key '*' --uuid UUID-HERE
+sudo lulu-cli disable --key '*' --uuid UUID-HERE
+```
+
+### `reload`
+
+Restart the LuLu system extension to apply changes. macOS auto-restarts it within ~8 seconds.
+
+```bash
+sudo lulu-cli reload
+```
+
+### `help`
+
+```bash
+lulu-cli help
 ```
 
 ## How It Works
@@ -74,15 +140,32 @@ LuLu stores rules in `/Library/Objective-See/LuLu/rules.plist` using NSKeyedArch
 
 The LuLu system extension only loads rules at startup. After changes, `reload` kills the extension process and macOS auto-restarts it (takes ~8 seconds). There's a brief gap in filtering during the restart.
 
-## AI Agent Skill
+## Using with AI Agents
+
+This CLI was designed for AI agents (like [OpenClaw](https://openclaw.ai) or [Claude Code](https://docs.anthropic.com/en/docs/claude-code)) that need to manage their own network access. A common setup is LuLu in passive mode with new connections defaulting to block, so the agent can't accidentally exfiltrate data. The agent uses lulu-cli to allow specific domains it needs.
+
+### Sudo Access
+
+Write operations require root. Two options:
+
+**Manual (default):** The agent asks a human to approve sudo commands. Safest.
+
+**Sudoers (automated):** Grant passwordless sudo for lulu-cli only:
+
+```bash
+echo 'yourusername ALL=(ALL) NOPASSWD: /usr/local/bin/lulu-cli, /opt/homebrew/bin/lulu-cli, /Users/yourusername/.local/bin/lulu-cli' | sudo tee /etc/sudoers.d/lulu-cli
+sudo chmod 0440 /etc/sudoers.d/lulu-cli
+```
+
+This allows `sudo lulu-cli` without a password, but only for lulu-cli.
+
+### AI Agent Skill
 
 This repo ships with an [AgentSkills](https://agentskills.io)-compatible skill in [`skills/lulu-cli/`](skills/lulu-cli/SKILL.md).
 
 **OpenClaw:** install via [ClawHub](https://clawhub.com) or copy the skill directory.
 
 **Claude Code:** the `.claude-plugin/` manifest makes it installable from the marketplace.
-
-The skill teaches AI agents when and how to use lulu-cli, so they can diagnose blocked connections and fix them without human intervention.
 
 ## License
 

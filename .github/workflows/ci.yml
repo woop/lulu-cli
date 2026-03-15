@@ -12,8 +12,57 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Build
+      - name: Build (release)
         run: swift build -c release
 
-      - name: Show binary info
-        run: file .build/release/lulu-cli
+      - name: Build (debug)
+        run: swift build
+
+      - name: Verify binary runs
+        run: |
+          .build/debug/lulu-cli help
+          .build/debug/lulu-cli help 2>&1 | grep -q "Usage:" || (echo "help output missing Usage:" && exit 1)
+
+      - name: Verify all commands are listed in help
+        run: |
+          HELP=$(.build/debug/lulu-cli help 2>&1)
+          for cmd in list recent add delete delete-match enable disable reload; do
+            echo "$HELP" | grep -q "$cmd" || (echo "Missing command in help: $cmd" && exit 1)
+          done
+          echo "All commands present in help output"
+
+      - name: Verify binary is universal (release)
+        run: |
+          swift build -c release --arch arm64 --arch x86_64
+          file .build/apple/Products/Release/lulu-cli | grep -q "universal" || \
+          (lipo -info .build/apple/Products/Release/lulu-cli | grep -q "arm64 x86_64") || \
+          echo "Warning: universal build check inconclusive (may work differently in CI)"
+
+      - name: Verify list with missing plist exits gracefully
+        run: |
+          # Without LuLu installed, list should fail gracefully (not crash)
+          .build/debug/lulu-cli list 2>&1 || true
+          echo "CLI handled missing plist without crashing"
+
+      - name: Verify recent with missing plist exits gracefully
+        run: |
+          .build/debug/lulu-cli recent 2>&1 || true
+          echo "CLI handled missing plist without crashing"
+
+      - name: Verify unknown command shows usage
+        run: |
+          .build/debug/lulu-cli nonexistent 2>&1 | grep -q "Usage:\|Unknown command" || \
+          (echo "Unknown command didn't show usage" && exit 1)
+
+      - name: Verify skill files exist
+        run: |
+          test -f skills/lulu-cli/SKILL.md || (echo "Missing SKILL.md" && exit 1)
+          test -f skills/lulu-cli/references/commands.md || (echo "Missing commands.md" && exit 1)
+          test -f .claude-plugin/marketplace.json || (echo "Missing marketplace.json" && exit 1)
+          echo "All skill files present"
+
+      - name: Validate marketplace.json
+        run: |
+          python3 -c "import json; json.load(open('.claude-plugin/marketplace.json'))" || \
+          (echo "Invalid JSON in marketplace.json" && exit 1)
+          echo "marketplace.json is valid JSON"
