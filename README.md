@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="logo.png" alt="lulu-cli mascot" width="200">
+</p>
+
 # lulu-cli
 
 Manage [LuLu](https://objective-see.org/products/lulu.html) firewall rules from the command line.
