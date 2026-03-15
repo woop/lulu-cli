@@ -4,7 +4,7 @@
   "description": "Manage LuLu macOS firewall rules from the terminal",
   "owner": {
     "name": "Willem Pienaar",
-    "email": "willem@pienaar.io"
+    "email": "github@willem.co"
   },
   "plugins": [
     {
