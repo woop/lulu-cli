@@ -189,26 +189,6 @@ lulu-cli help
 - **type**: `default` (system), `apple`, `user` (manually created), `passive` (auto-created from blocked connections)
 - **Global rules**: key=`*` and path=`*` apply to all applications
 
-## Agent Access (sudo)
-
-Write operations require root. For AI agents to use lulu-cli non-interactively, you have two options:
-
-**Option 1: Manual (default, more secure)**
-
-The agent asks a human to run sudo commands. Safest approach.
-
-**Option 2: Sudoers entry (automated, use with caution)**
-
-Grant passwordless sudo for lulu-cli only:
-
-```bash
-# Add to /etc/sudoers.d/lulu-cli
-echo 'yourusername ALL=(ALL) NOPASSWD: /usr/local/bin/lulu-cli, /opt/homebrew/bin/lulu-cli, /Users/yourusername/.local/bin/lulu-cli' | sudo tee /etc/sudoers.d/lulu-cli
-sudo chmod 0440 /etc/sudoers.d/lulu-cli
-```
-
-This allows the agent to run `sudo lulu-cli ...` without a password prompt, but only for lulu-cli. No other commands get elevated access.
-
 ## Rule Policy: Allow-All vs Domain Allowlist
 
 Not all processes should get unrestricted internet access. When using LuLu as a security boundary for AI agents:

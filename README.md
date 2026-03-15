@@ -144,21 +144,6 @@ The LuLu system extension only loads rules at startup. After changes, `reload` k
 
 This CLI was designed for AI agents (like [OpenClaw](https://openclaw.ai) or [Claude Code](https://docs.anthropic.com/en/docs/claude-code)) that need to manage their own network access. A common setup is LuLu in passive mode with new connections defaulting to block, so the agent can't accidentally exfiltrate data. The agent uses lulu-cli to allow specific domains it needs.
 
-### Sudo Access
-
-Write operations require root. Two options:
-
-**Manual (default):** The agent asks a human to approve sudo commands. Safest.
-
-**Sudoers (automated):** Grant passwordless sudo for lulu-cli only:
-
-```bash
-echo 'yourusername ALL=(ALL) NOPASSWD: /usr/local/bin/lulu-cli, /opt/homebrew/bin/lulu-cli, /Users/yourusername/.local/bin/lulu-cli' | sudo tee /etc/sudoers.d/lulu-cli
-sudo chmod 0440 /etc/sudoers.d/lulu-cli
-```
-
-This allows `sudo lulu-cli` without a password, but only for lulu-cli.
-
 ### AI Agent Skill
 
 This repo ships with an [AgentSkills](https://agentskills.io)-compatible skill in [`skills/lulu-cli/`](skills/lulu-cli/SKILL.md).
